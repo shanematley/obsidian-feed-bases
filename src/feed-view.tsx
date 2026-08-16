@@ -5,6 +5,7 @@ import {
   Menu,
   QueryController,
 } from "obsidian";
+import type { PaneType } from "obsidian";
 import { StrictMode } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { FeedReactView } from "./FeedReactView";
@@ -227,9 +228,9 @@ export class FeedView extends BasesView {
             headingFilter={headingFilter}
             multipleColumns={multipleColumns}
             maxCardWidth={maxCardWidth}
-            onEntryClick={(entry: BasesEntry, isModEvent: boolean) => {
+            onEntryClick={(entry: BasesEntry, paneType: PaneType | boolean) => {
               this.app.workspace
-                .openLinkText(entry.file.path, "", isModEvent)
+                .openLinkText(entry.file.path, "", paneType)
                 .catch((err) => reportError("Failed to open note", err));
             }}
             onEntryContextMenu={(evt: React.MouseEvent, entry: BasesEntry) => {
