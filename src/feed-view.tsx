@@ -10,6 +10,7 @@ import { createRoot, Root } from "react-dom/client";
 import { FeedReactView } from "./FeedReactView";
 import { AppContext } from "./context";
 import { reportError } from "./utils";
+import { FEED_CARD_CLASS } from "./VirtualFeedList";
 
 export const FeedViewType = "feed";
 
@@ -25,6 +26,7 @@ export class FeedView extends BasesView {
   root: Root | null = null;
 
   private entries: BasesEntry[] = [];
+  private pendingRenderFrame: number | null = null;
 
   constructor(controller: QueryController, scrollEl: HTMLElement) {
     super(controller);
@@ -40,6 +42,10 @@ export class FeedView extends BasesView {
   }
 
   onunload() {
+    if (this.pendingRenderFrame !== null) {
+      cancelAnimationFrame(this.pendingRenderFrame);
+      this.pendingRenderFrame = null;
+    }
     if (this.root) {
       this.root.unmount();
       this.root = null;
@@ -57,7 +63,39 @@ export class FeedView extends BasesView {
 
   public onDataUpdated(): void {
     this.containerEl.removeClass("is-loading");
+    this.scheduleGuardedRender();
+  }
+
+  // A feed rendered inside another feed's card would recurse (its cards
+  // render notes whose embedded bases spawn more feeds). Cap the depth at
+  // one by rendering a flat placeholder instead. The ancestry check is only
+  // meaningful once our DOM is attached — embedded views can receive data
+  // while still detached — so rendering is deferred until connected.
+  private scheduleGuardedRender(): void {
+    if (this.pendingRenderFrame !== null) return;
+    if (!this.containerEl.isConnected) {
+      this.pendingRenderFrame = requestAnimationFrame(() => {
+        this.pendingRenderFrame = null;
+        this.scheduleGuardedRender();
+      });
+      return;
+    }
+    if (this.containerEl.closest(`.${FEED_CARD_CLASS}`)) {
+      this.renderNestedPlaceholder();
+      return;
+    }
     this.updateFeed();
+  }
+
+  private renderNestedPlaceholder(): void {
+    if (this.root) {
+      this.root.unmount();
+      this.root = null;
+    }
+    this.containerEl.empty();
+    this.containerEl.createDiv("bases-feed-nested-placeholder").setText(
+      "Nested feed hidden to prevent recursion",
+    );
   }
 
   private updateFeed(): void {
@@ -165,6 +203,18 @@ export class FeedView extends BasesView {
       (this.config.get("multipleColumns") as boolean | undefined) ?? false;
     const maxCardWidth =
       (this.config.get("maxCardWidth") as number | undefined) ?? 400;
+    const staticCards =
+      (this.config.get("staticCards") as boolean | undefined) ?? false;
+    const headingText = (
+      (this.config.get("headingFilter") as string | undefined) ?? ""
+    ).trim();
+    const headingMode =
+      this.config.get("headingFilterMode") === "exclude"
+        ? ("exclude" as const)
+        : ("include" as const);
+    const headingFilter = headingText
+      ? { heading: headingText, mode: headingMode }
+      : null;
 
     this.root.render(
       <StrictMode>
@@ -173,6 +223,8 @@ export class FeedView extends BasesView {
             entries={this.entries}
             scrollElement={this.scrollEl}
             showProperties={showProperties}
+            staticCards={staticCards}
+            headingFilter={headingFilter}
             multipleColumns={multipleColumns}
             maxCardWidth={maxCardWidth}
             onEntryClick={(entry: BasesEntry, isModEvent: boolean) => {

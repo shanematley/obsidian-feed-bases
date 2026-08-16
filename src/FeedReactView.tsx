@@ -1,7 +1,11 @@
 import { BasesEntry } from "obsidian";
 import React from "react";
 import { MasonryView } from "./MasonryView";
-import { FeedEntryHandlers, VirtualFeedList } from "./VirtualFeedList";
+import {
+  CardRenderOptions,
+  FeedEntryHandlers,
+  VirtualFeedList,
+} from "./VirtualFeedList";
 
 export const FeedReactView: React.FC<FeedReactViewProps> = ({
   entries,
@@ -9,6 +13,8 @@ export const FeedReactView: React.FC<FeedReactViewProps> = ({
   onEntryContextMenu,
   scrollElement,
   showProperties,
+  staticCards,
+  headingFilter,
   multipleColumns = false,
   maxCardWidth = 400,
 }) => {
@@ -21,6 +27,8 @@ export const FeedReactView: React.FC<FeedReactViewProps> = ({
         onEntryContextMenu={onEntryContextMenu}
         scrollElement={scrollElement}
         showProperties={showProperties}
+        staticCards={staticCards}
+        headingFilter={headingFilter}
         maxCardWidth={maxCardWidth}
       />
     );
@@ -40,6 +48,8 @@ export const FeedReactView: React.FC<FeedReactViewProps> = ({
           scrollElement={scrollElement}
           overscan={8}
           showProperties={showProperties}
+          staticCards={staticCards}
+          headingFilter={headingFilter}
           onEntryClick={onEntryClick}
           onEntryContextMenu={onEntryContextMenu}
         />
@@ -50,10 +60,11 @@ export const FeedReactView: React.FC<FeedReactViewProps> = ({
 
 // Props
 
-type FeedReactViewProps = FeedEntryHandlers & {
-  entries: BasesEntry[];
-  scrollElement: HTMLElement;
-  showProperties: boolean;
-  multipleColumns?: boolean;
-  maxCardWidth?: number;
-};
+type FeedReactViewProps = FeedEntryHandlers &
+  CardRenderOptions & {
+    entries: BasesEntry[];
+    scrollElement: HTMLElement;
+    showProperties: boolean;
+    multipleColumns?: boolean;
+    maxCardWidth?: number;
+  };

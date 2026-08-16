@@ -15,7 +15,7 @@ Adds a feed layout to [Obsidian Bases](https://help.obsidian.md/bases) so you ca
 
 ## Environment & tooling
 
-- Node.js: use current LTS (Node 18+ recommended).
+- Node.js: use current LTS (Node 22.18+ required — `npm test` runs TypeScript directly via Node's native type stripping).
 - **Package manager: npm** (required for this sample - `package.json` defines npm scripts and dependencies).
 - **Bundler: esbuild** (required for this sample - `esbuild.config.mjs` and build scripts depend on it). Alternative bundlers like Rollup or webpack are acceptable for other projects if they bundle all external dependencies into `main.js`.
 - Types: `obsidian` type definitions.

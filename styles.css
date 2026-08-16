@@ -141,6 +141,30 @@
   display: none;
 }
 
+/* Static (read-only) card content rendered by MarkdownRenderer */
+.bases-feed-entry-static {
+  font-family: var(--font-text);
+  font-size: var(--font-text-size);
+  line-height: 1.6;
+}
+
+.bases-feed-entry-static > :first-child {
+  margin-top: 0;
+}
+
+.bases-feed-entry-static > :last-child {
+  margin-bottom: 0;
+}
+
+/* Placeholder shown instead of a feed nested inside another feed's card */
+.bases-feed-nested-placeholder {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  padding: 12px;
+  border: 1px dashed var(--background-modifier-border);
+  border-radius: 4px;
+}
+
 .bases-feed-error {
   color: var(--text-error);
   font-size: var(--font-ui-small);

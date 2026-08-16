@@ -3,8 +3,12 @@
 	"version": "0.2.0",
 	"description": "Adds feed view to Obsidian Bases.",
 	"main": "main.js",
+	"engines": {
+		"node": ">=22.18.0"
+	},
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
+		"test": "node --test src/*.test.ts",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},

@@ -1,6 +1,10 @@
 import { BasesEntry } from "obsidian";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { FeedEntryHandlers, VirtualFeedList } from "./VirtualFeedList";
+import {
+  CardRenderOptions,
+  FeedEntryHandlers,
+  VirtualFeedList,
+} from "./VirtualFeedList";
 
 export const MasonryView: React.FC<MasonryViewProps> = ({
   entries,
@@ -8,6 +12,8 @@ export const MasonryView: React.FC<MasonryViewProps> = ({
   onEntryContextMenu,
   scrollElement,
   showProperties,
+  staticCards,
+  headingFilter,
   maxCardWidth,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -71,6 +77,8 @@ export const MasonryView: React.FC<MasonryViewProps> = ({
                 scrollElement={scrollElement}
                 overscan={5}
                 showProperties={showProperties}
+                staticCards={staticCards}
+                headingFilter={headingFilter}
                 onEntryClick={onEntryClick}
                 onEntryContextMenu={onEntryContextMenu}
               />
@@ -84,9 +92,10 @@ export const MasonryView: React.FC<MasonryViewProps> = ({
 
 // Props
 
-type MasonryViewProps = FeedEntryHandlers & {
-  entries: BasesEntry[];
-  scrollElement: HTMLElement;
-  showProperties: boolean;
-  maxCardWidth: number;
-};
+type MasonryViewProps = FeedEntryHandlers &
+  CardRenderOptions & {
+    entries: BasesEntry[];
+    scrollElement: HTMLElement;
+    showProperties: boolean;
+    maxCardWidth: number;
+  };
