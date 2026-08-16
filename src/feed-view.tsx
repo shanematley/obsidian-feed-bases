@@ -9,10 +9,16 @@ import { StrictMode } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { FeedReactView } from "./FeedReactView";
 import { AppContext } from "./context";
+import { reportError } from "./utils";
 
 export const FeedViewType = "feed";
 
 export class FeedView extends BasesView {
+  private static readonly collator = new Intl.Collator(undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+
   type = FeedViewType;
   scrollEl: HTMLElement;
   containerEl: HTMLElement;
@@ -72,55 +78,53 @@ export class FeedView extends BasesView {
     const firstSortProperty = sort?.[0]?.property;
     // Normalize direction to 'ASC' | 'DESC'; default to ASC for alphabetical title sort
     const firstSortDirection = sort?.[0]?.direction ?? "ASC";
-    // Always call sort with a comparator. If no property selected, default to file title A–Z.
-    this.entries.sort(
-      this.getEntryComparator(firstSortProperty, firstSortDirection),
+    // Always sort. If no property selected, default to file title A–Z.
+    this.entries = this.sortEntries(
+      this.entries,
+      firstSortProperty,
+      firstSortDirection,
     );
 
     this.renderReactFeed();
   }
 
-  // Build a comparator for entries based on an optional property and direction.
-  // If no property is provided, defaults to sorting by file title (basename) A–Z.
-  private getEntryComparator(
+  // Sort entries by an optional property and direction. If no property is
+  // provided, defaults to sorting by file title (basename) A–Z.
+  private sortEntries(
+    entries: BasesEntry[],
     property?: BasesPropertyId,
     direction: "ASC" | "DESC" = "ASC",
-  ): (a: BasesEntry, b: BasesEntry) => number {
-    if (property) {
-      return (a: BasesEntry, b: BasesEntry) => {
-        const valueA = this.getPropertyValue(a, property);
-        const valueB = this.getPropertyValue(b, property);
-
-        let compareValue = 0;
-        if (valueA === null && valueB === null) {
-          compareValue = 0;
-        } else if (valueA === null) {
-          compareValue = 1; // nulls last
-        } else if (valueB === null) {
-          compareValue = -1; // nulls last
-        } else if (typeof valueA === "number" && typeof valueB === "number") {
-          compareValue = valueA - valueB;
-        } else {
-          compareValue = String(valueA).localeCompare(
-            String(valueB),
-            undefined,
-            {
-              numeric: true,
-              sensitivity: "base",
-            },
-          );
-        }
-
-        return direction === "ASC" ? compareValue : -compareValue;
-      };
+  ): BasesEntry[] {
+    if (!property) {
+      // Default: sort by file title (basename) A–Z, case-insensitive, numeric-aware
+      return entries.sort((a, b) =>
+        FeedView.collator.compare(a.file.basename, b.file.basename),
+      );
     }
 
-    // Default: sort by file title (basename) A–Z, case-insensitive, numeric-aware
-    return (a: BasesEntry, b: BasesEntry) =>
-      a.file.basename.localeCompare(b.file.basename, undefined, {
-        numeric: true,
-        sensitivity: "base",
-      });
+    // Extract each entry's sort key once up front; getValue/valueOf per
+    // comparison is too slow for large bases.
+    const keyed = entries.map((entry) => ({
+      entry,
+      key: this.getPropertyValue(entry, property),
+    }));
+    const sign = direction === "DESC" ? -1 : 1;
+
+    keyed.sort((a, b) => {
+      // Nulls last regardless of direction, so direction only applies to
+      // the real-value comparison below.
+      if (a.key === null && b.key === null) return 0;
+      if (a.key === null) return 1;
+      if (b.key === null) return -1;
+
+      const compareValue =
+        typeof a.key === "number" && typeof b.key === "number"
+          ? a.key - b.key
+          : FeedView.collator.compare(String(a.key), String(b.key));
+      return sign * compareValue;
+    });
+
+    return keyed.map((k) => k.entry);
   }
 
   private getPropertyValue(
@@ -131,12 +135,18 @@ export class FeedView extends BasesView {
       const value = entry.getValue(propId);
       if (!value || !value.isTruthy()) return null;
 
-      // Try to get a comparable value
-      const valueObj = value as unknown;
-      if (valueObj instanceof Date) return valueObj.getTime();
-      if (typeof valueObj === "object" && valueObj && "valueOf" in valueObj) {
-        return (valueObj as { valueOf: () => string | number }).valueOf();
+      // Try to get a comparable primitive. A value that doesn't override
+      // valueOf() returns itself (an object), so only accept primitives here
+      // and fall through to toString() otherwise.
+      const primitive = (
+        value as unknown as { valueOf: () => unknown }
+      ).valueOf();
+      if (typeof primitive === "number") return primitive;
+      if (primitive instanceof Date) return primitive.getTime();
+      if (typeof primitive === "string") {
+        return primitive.trim().length > 0 ? primitive : null;
       }
+
       const str = value.toString();
       return str && str.trim().length > 0 ? str : null;
     } catch {
@@ -168,9 +178,7 @@ export class FeedView extends BasesView {
             onEntryClick={(entry: BasesEntry, isModEvent: boolean) => {
               this.app.workspace
                 .openLinkText(entry.file.path, "", isModEvent)
-                .catch((err) => {
-                  console.error("Failed to open link:", err);
-                });
+                .catch((err) => reportError("Failed to open note", err));
             }}
             onEntryContextMenu={(evt: React.MouseEvent, entry: BasesEntry) => {
               evt.preventDefault();
